@@ -1,6 +1,5 @@
 using AnovaGLM, CSV, RDatasets, DataFrames, CategoricalArrays
 using Test
-using AnovaGLM: coefnames
 import Base.isapprox
 
 test_show(x) = show(IOBuffer(), x)
