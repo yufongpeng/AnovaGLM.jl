@@ -158,4 +158,10 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
             @test isapprox(filter(!isnan, pval(aov)), (0.004885873691352542, 3.202701170052312e-44, 0.15429963193830074))
         end
     end
+    @testset "Miscellaneous" begin
+        lm1 = lm(@formula(SepalLength ~ 0 + log(SepalWidth) * Species), iris, dropcollinear = false)
+        lm2 = lm(@formula(SepalLength ~ SepalWidth + SepalWidth & Species), iris, dropcollinear = false)
+        @test AnovaGLM.subtablemodel(lm1, 2; reschema = true)[2].assign == [2]
+        @test AnovaGLM.subtablemodel(lm2, [2]; reschema = true)[2].assign == [1, 2, 2, 2]
+    end    
 end

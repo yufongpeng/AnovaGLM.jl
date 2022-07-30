@@ -1,6 +1,30 @@
 # ===========================================================================================
 # Main API
+"""
+    anova(<models>...; test::Type{<: GoodnessOfFit},  <keyword arguments>)
+    anova(test::Type{<: GoodnessOfFit}, <models>...;  <keyword arguments>)
 
+Analysis of variance.
+
+Return `AnovaResult{M, test, N}`
+
+* `models`: model objects
+    1. `TableRegressionModel{<: LinearModel}` fitted by `GLM.lm`
+    2. `TableRegressionModel{<: GeneralizedLinearModel}` fitted by `GLM.glm`
+    If mutiple models are provided, they should be nested and the last one is the most saturated.
+* `test`: test statistics for goodness of fit. Available tests are [`LikelihoodRatioTest`](@ref) ([`LRT`](@ref)) and [`FTest`](@ref). The default is based on the model type.
+    1. `TableRegressionModel{<: LinearModel}`: `FTest`.
+    2. `TableRegressionModel{<: GeneralizedLinearModel}`: based on distribution function, see `canonicalgoodnessoffit`.
+
+Other keyword arguments:
+* When one model is provided:  
+    1. `type` specifies type of anova (1, 2 or 3). Default value is 1.
+* When multiple models are provided:  
+    1. `check`: allows to check if models are nested. Defalut value is true. Some checkers are not implemented now.
+    2. `isnested`: true when models are checked as nested (manually or automatically). Defalut value is false. 
+
+For fitting new models and conducting anova at the same time, see [`anova_lm`](@ref) for `LinearModel`, [`anova_glm`](@ref) for `GeneralizedLinearModel`.
+"""
 anova(models::Vararg{TableRegressionModel{<: LinearModel, <: AbstractArray}, N}; 
         test::Type{T} = FTest,
         kwargs...) where {N, T <: GoodnessOfFit} = 
@@ -117,21 +141,11 @@ function anova(::Type{FTest},
     ord = sortperm(collect(df))
     df = df[ord]
     trms = trms[ord]
-
+    dfr = round.(Int, dof_residual.(trms))
+    # May exist some floating point error from dof_residual
     # check comparable and nested
     check && @warn "Could not check whether models are nested: results may not be meaningful"
-
-    Δdf = _diff(df)
-    # May exist some floating point error from dof_residual
-    dfr = round.(Int, dof_residual.(trms))
-    dev = deviance.(trms)
-    msr = _diffn(dev) ./Δdf
-    σ² = dispersion(last(trms).model, true)
-    fstat = msr ./ σ²
-    pval = map(zip(Δdf, dfr[2:end], fstat)) do (dof, dofr, fs)
-        fs > 0 ? ccdf(FDist(dof, dofr), fs) : NaN
-    end
-    AnovaResult{FTest}(trms, 1, df, dev, (NaN, fstat...), (NaN, pval...), NamedTuple())
+    ftest_nested(trms, df, dfr, deviance.(trms), dispersion(last(trms).model, true))
 end
 
 function anova(::Type{LRT}, 
@@ -141,9 +155,10 @@ function anova(::Type{LRT},
     df = dof.(trms)
     ord = sortperm(collect(df))
     trms = trms[ord]
-    # check comparable and nested
     df = df[ord]
-    lrt_nested(trms, df, deviance.(trms), dispersion(last(trms).model, true); nestedwarn = true)
+    # check comparable and nested
+    check && @warn "Could not check whether models are nested: results may not be meaningful"
+    lrt_nested(trms, df, deviance.(trms), dispersion(last(trms).model, true))
 end
 
 
@@ -162,7 +177,7 @@ end
 ANOVA for simple linear regression.
 
 The arguments `X` and `y` can be a `Matrix` and a `Vector` or a `Formula` and a `DataFrame`. 
-* `type` specifies type of anova.
+* `type` specifies type of anova (1, 2 or 3). Default value is 1.
 * `dropcollinear` controls whether or not `lm` accepts a model matrix which is less-than-full rank. If true (the default), only the first of each set of linearly-dependent columns is used. The coefficient for redundant linearly dependent columns is 0.0 and all associated statistics are set to NaN.
 
 `anova_lm` generate a `TableRegressionModel` object, which is fitted by `lm`.

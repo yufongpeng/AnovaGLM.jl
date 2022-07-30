@@ -16,7 +16,7 @@ import GLM: glm,
             updateμ!, cholfactors, 
             # other
             FP, BlasReal, Link, dispersion, deviance, dof, dof_residual, nobs
-import AnovaBase: lrt_nested, formula, nestedmodels, isnullable, _diff, _diffn, subformula, selectcoef, dof, dof_residual, deviance, nobs, coefnames
+import AnovaBase: lrt_nested, ftest_nested, formula, nestedmodels, _diff, _diffn, subformula, selectcoef, dof, dof_residual, deviance, nobs, coefnames, extract_contrasts
 using DataFrames: DataFrame, ByRow, combine
 
 export anova_lm, anova_glm

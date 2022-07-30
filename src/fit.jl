@@ -39,7 +39,7 @@ function deviances(trm::TableRegressionModel{<: Union{LinearModel, GeneralizedLi
         todel = unique(assign)
         if start > 0 
             # ~ 0 + A + A & B, all terms are related to A, ~ A as null
-            selectcoef(f, Val(first(todel))) == Set(todel) && popfirst!(todel)
+            selectcoef(f, first(todel)) == Set(todel) && popfirst!(todel)
             # ~ 0 + A, ~ 1
             if isempty(todel)
                 throw(err1)
@@ -53,7 +53,7 @@ function deviances(trm::TableRegressionModel{<: Union{LinearModel, GeneralizedLi
         # cache fitted
         dict_devs = Dict{Set{Int}, T}()
         @inbounds for (id, del) in enumerate(todel)
-            delcoef = selectcoef(f, Val(del))
+            delcoef = selectcoef(f, del)
             dev1 = get(dict_devs, delcoef, (push!(dict_devs, delcoef => deviance(trm, delcoef; kwargs...)); dict_devs[delcoef]))
             delete!(delcoef, del)
             dev2 = get(dict_devs, delcoef, (push!(dict_devs, delcoef => deviance(trm, delcoef; kwargs...)); dict_devs[delcoef]))
@@ -275,6 +275,21 @@ function linpred!(out, p::LinPred, X::Matrix, f::Real = 1.0)
 end
 
 # Create nestedmodels
+"""
+    nestedmodels(trm::TableRegressionModel{<: LinearModel}; null::Bool = true, <keyword arguments>)
+    nestedmodels(trm::TableRegressionModel{<: GeneralizedLinearModel}; null::Bool = true, <keyword arguments>)
+
+    nestedmodels(::Type{LinearModel}, formula, data; null::Bool = true, <keyword arguments>)
+    nestedmodels(::Type{GeneralizedLinearModel}, formula, data, distr::UnivariateDistribution, link::Link = canonicallink(d); null::Bool = true, <keyword arguments>)
+
+Generate nested models from a model or formula and data.
+
+The null model will be a model with at least one factor (including intercept) if the link function does not allow factors to be 0 (factors in denominators) or the keyword argument `null` is false (default value is true).
+* `InverseLink` for `Gamma`
+* `InverseSquareLink` for `InverseGaussian`
+* `LinearModel` fitted with `CholeskyPivoted` when `dropcollinear = true`
+Otherwise, it will be an empty model.
+"""
 function nestedmodels(trm::TableRegressionModel{<: LinearModel}; null::Bool = true, kwargs...)
     null = null && isnullable(trm.model.pp.chol)
     assign = unique(trm.mm.assign)
