@@ -275,7 +275,7 @@ function linpred!(out, p::LinPred, X::Matrix, f::Real = 1.0)
 end
 
 # Create nestedmodels
-"""
+@doc """
     nestedmodels(trm::TableRegressionModel{<: LinearModel}; null::Bool = true, <keyword arguments>)
     nestedmodels(trm::TableRegressionModel{<: GeneralizedLinearModel}; null::Bool = true, <keyword arguments>)
 
@@ -290,6 +290,8 @@ The null model will be a model with at least one factor (including intercept) if
 * `LinearModel` fitted with `CholeskyPivoted` when `dropcollinear = true`
 Otherwise, it will be an empty model.
 """
+nestedmodels(::Val{:AnovaGLM})
+
 function nestedmodels(trm::TableRegressionModel{<: LinearModel}; null::Bool = true, kwargs...)
     null = null && isnullable(trm.model.pp.chol)
     assign = unique(trm.mm.assign)

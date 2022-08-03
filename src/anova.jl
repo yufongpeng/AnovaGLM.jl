@@ -1,6 +1,6 @@
 # ===========================================================================================
 # Main API
-"""
+@doc """
     anova(<models>...; test::Type{<: GoodnessOfFit},  <keyword arguments>)
     anova(test::Type{<: GoodnessOfFit}, <models>...;  <keyword arguments>)
 
@@ -12,7 +12,7 @@ Return `AnovaResult{M, test, N}`
     1. `TableRegressionModel{<: LinearModel}` fitted by `GLM.lm`
     2. `TableRegressionModel{<: GeneralizedLinearModel}` fitted by `GLM.glm`
     If mutiple models are provided, they should be nested and the last one is the most saturated.
-* `test`: test statistics for goodness of fit. Available tests are [`LikelihoodRatioTest`](@ref) ([`LRT`](@ref)) and [`FTest`](@ref). The default is based on the model type.
+* `test`: test statistics for goodness of fit. Available tests are [`LikelihoodRatioTest`] ([`LRT`]) and [`FTest`]. The default is based on the model type.
     1. `TableRegressionModel{<: LinearModel}`: `FTest`.
     2. `TableRegressionModel{<: GeneralizedLinearModel}`: based on distribution function, see `canonicalgoodnessoffit`.
 
@@ -25,6 +25,8 @@ Other keyword arguments:
 
 For fitting new models and conducting anova at the same time, see [`anova_lm`](@ref) for `LinearModel`, [`anova_glm`](@ref) for `GeneralizedLinearModel`.
 """
+anova(::Val{:AnovaGLM})
+
 anova(models::Vararg{TableRegressionModel{<: LinearModel, <: AbstractArray}, N}; 
         test::Type{T} = FTest,
         kwargs...) where {N, T <: GoodnessOfFit} = 
