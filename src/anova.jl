@@ -12,7 +12,7 @@ Return `AnovaResult{M, test, N}`
     1. `TableRegressionModel{<: LinearModel}` fitted by `GLM.lm`
     2. `TableRegressionModel{<: GeneralizedLinearModel}` fitted by `GLM.glm`
     If mutiple models are provided, they should be nested and the last one is the most saturated.
-* `test`: test statistics for goodness of fit. Available tests are [`LikelihoodRatioTest`] ([`LRT`]) and [`FTest`]. The default is based on the model type.
+* `test`: test statistics for goodness of fit. Available tests are [`LikelihoodRatioTest`](@ref) ([`LRT`](@ref)) and [`FTest`](@ref). The default is based on the model type.
     1. `TableRegressionModel{<: LinearModel}`: `FTest`.
     2. `TableRegressionModel{<: GeneralizedLinearModel}`: based on distribution function, see `canonicalgoodnessoffit`.
 
