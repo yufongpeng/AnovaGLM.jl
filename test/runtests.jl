@@ -77,7 +77,7 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
         @testset "Linear regression with frequency weights" begin
             wlm1, wlm2 = nestedmodels(LinearModel, @formula(Cost / Claims ~ Insured + Merit), insurance, 
                                     wts = insurance.Claims ./ sum(insurance.Claims) .* length(insurance.Claims))
-            global aov = anova(wlm2)
+            global aov = anova(wlm2, type = 2)
             global aovf = anova(wlm1, wlm2)
             @test !(@test_error test_show(aov))
             @test !(@test_error test_show(aovf))
@@ -92,6 +92,10 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
             global aov = anova_glm(FTest, @formula(Cost / Claims ~ 0 + Insured + Merit), insurance, Gamma(), 
                                     wts = insurance.Claims ./ sum(insurance.Claims) .* length(insurance.Claims), type = 2)
             @test !(@test_error test_show(aov))
+            @test @test_error anova_glm(@formula(Cost / Claims ~ Merit + Class), insurance, Gamma(), type = 3)
+            @test @test_error anova_glm(@formula(Cost / Claims ~ 1 + Class), insurance, Gamma(), type = 3)
+            @test @test_error anova_glm(@formula(Cost / Claims ~ 0 + Class), insurance, Gamma(), type = 3)
+            @test @test_error anova_glm(@formula(Cost / Claims ~ 0 + Class), insurance, Gamma(), type = 2)
             @test nobs(aov) == nobs(aov.model)
             @test dof(aov) == (1, 4, 15)
             @test isapprox(filter(!isnan, deviance(aov)), AnovaGLM.deviances(aov.model, type = anova_type(aov)))

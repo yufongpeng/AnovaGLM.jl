@@ -71,7 +71,7 @@ function deviances(trm::TableRegressionModel{<: Union{LinearModel, GeneralizedLi
             # Do not inspect InteractionTerm
             elseif length(todel) == 2
                 if isa(f.terms[todel][1], Union{CategoricalTerm, InterceptTerm{true}})
-                    isa(f.terms[todel][1], CategoricalTerm) && throw(err2)
+                    isa(f.terms[todel][2], CategoricalTerm) && throw(err2)
                 end
             end
         end
