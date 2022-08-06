@@ -10,5 +10,5 @@
 [docs-stable-url]: https://yufongpeng.github.io/AnovaBase.jl/stable/GLM
 [ci-img]: https://github.com/yufongpeng/AnovaGLM.jl/workflows/CI/badge.svg
 [ci-url]: https://github.com/yufongpeng/AnovaGLM.jl/actions?query=workflow%3ACI
-[codecov-img]: https://codecov.io/gh/yufongpeng/AnovaGLM.jl/coveage.svg
+[codecov-img]: https://codecov.io/gh/yufongpeng/AnovaGLM.jl/branch/main/graph/badge.svg?token=a80Q5DNInO
 [codecov-url]: https://codecov.io/gh/yufongpeng/AnovaGLM.jl
