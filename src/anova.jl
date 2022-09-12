@@ -8,47 +8,52 @@ Analysis of variance.
 
 Return `AnovaResult{M, test, N}`. See [`AnovaResult`](@ref) for details.
 
+# Arguments
 * `models`: model objects
     1. `TableRegressionModel{<: LinearModel}` fitted by `GLM.lm`
     2. `TableRegressionModel{<: GeneralizedLinearModel}` fitted by `GLM.glm`
-    If mutiple models are provided, they should be nested and the last one is the most saturated.
+    If mutiple models are provided, they should be nested and the last one is the most complex.
 * `test`: test statistics for goodness of fit. Available tests are [`LikelihoodRatioTest`](@ref) ([`LRT`](@ref)) and [`FTest`](@ref). The default is based on the model type.
     1. `TableRegressionModel{<: LinearModel}`: `FTest`.
     2. `TableRegressionModel{<: GeneralizedLinearModel}`: based on distribution function, see `canonicalgoodnessoffit`.
 
-Other keyword arguments:
+## Other keyword arguments
 * When one model is provided:  
     1. `type` specifies type of anova (1, 2 or 3). Default value is 1.
 * When multiple models are provided:  
     1. `check`: allows to check if models are nested. Defalut value is true. Some checkers are not implemented now.
     2. `isnested`: true when models are checked as nested (manually or automatically). Defalut value is false. 
 
-Algorithm:
+# Algorithm
 
-For the ith model, devᵢ is defined as the sum of [squared deviance residuals (unit deviance)](https://en.wikipedia.org/wiki/Deviance_(statistics)). 
+The variable `dev` is a vector that the ith element is defined as the sum of [squared deviance residuals (unit deviance)](https://en.wikipedia.org/wiki/Deviance_(statistics)) of the ith model. 
 It is equivalent to the residual sum of squares for ordinary linear regression.
-* F-test: 
+The variable `Δdev` is the difference of the adjacent elements of `dev`, i.e. `Δdevᵢ = devᵢ₋₁ - devᵢ`.
 
-    The attribute `deviance` is Δdevᵢ = devᵢ₋₁ - devᵢ.
+## F-test
 
-    F-statistic is then defined as Δdevᵢ/(squared dispersion × degree of freedom).
+The attribute `deviance` of `AnovaResult` is `Δdev`.
 
-    For type I and III ANOVA, F-statistic is computed directly by the variAnce-covariance matrix(vcov) of the saturated model; the deviance is calculated backward.
-    1. Type I:
+F-statistic is then defined as `Δdev / (dispersion² × degree of freedom)`.
 
-        First, calculate f as the upper factor of Cholesky factorization of vcov⁻¹ * β.
+For type I and III ANOVA, F-statistic is computed directly by the variance-covariance matrix (`vcov`) of the most complex model; the deviance is calculated backward.
+1. Type I:
 
-        Then, for a factor that starts at ith row/column of vcov with n degree of freedom, the f-statistic is Σᵢⁱ⁺ⁿ⁻¹ fₖ²/n.
-    2. Type III: 
+    First, calculate `f` as the upper factor of Cholesky factorization of `vcov⁻¹ * β`.
 
-        For a factor occupying ith to jth row/column of vcov with n degree of freedom, f-statistic is (β[i:j]' * vcov[i:j, i:j]⁻¹ * β[i:j])/n.
-* LRT: 
+    Then, for a factor that starts from ith row/column of the model matrix with `n` degree of freedom, the f-statistic is `Σᵢⁱ⁺ⁿ⁻¹ fₖ² / n`.
+2. Type III: 
 
-    The attribute `deviance` is devᵢ.
-    
-    The likelihood ratio is defined as (devᵢ₋₁ - devᵢ)/squared dispersion.
+    For a factor occupying ith to jth row/column of the model matrix with `n` degree of freedom, the f-statistic is `β[i, ..., j]ᵀ * vcov[i, ..., j; i, ..., j]⁻¹ * β[i, ..., j] / n`.
 
-For fitting new models and conducting anova at the same time, see [`anova_lm`](@ref) for `LinearModel`, [`anova_glm`](@ref) for `GeneralizedLinearModel`.
+## LRT
+
+The attribute `deviance` of `AnovaResult` is `dev`.
+
+The likelihood ratio is defined as `Δdev / dispersion²`.
+
+!!! note
+    For fitting new models and conducting anova at the same time, see [`anova_lm`](@ref) for `LinearModel`, [`anova_glm`](@ref) for `GeneralizedLinearModel`.
 """
 anova(::Val{:AnovaGLM})
 
