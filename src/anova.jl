@@ -26,29 +26,35 @@ Return `AnovaResult{M, test, N}`. See [`AnovaResult`](@ref) for details.
 
 # Algorithm
 
-The variable `dev` is a vector that the ith element is defined as the sum of [squared deviance residuals (unit deviance)](https://en.wikipedia.org/wiki/Deviance_(statistics)) of the ith model. 
+Vectors of models and the corresponding base models:
+
+`model = (model₁, ..., modelₙ)`
+
+`basemodel = (basemodel₁, ..., basemodelₙ)`
+
+When `n + 1` models are given, `model = (model₂, ..., modelₙ₊₁), basemodel = (model₁, ..., modelₙ)`.
+When one model is given, `n` is the number of factors except for the factors used in the simplest models. The `basemodel` depends on the type of ANOVA.
+
+The variable `dev` and `basedev` are vectors that the ith elements are the sum of [squared deviance residuals (unit deviance)](https://en.wikipedia.org/wiki/Deviance_(statistics)) of `modelᵢ` and `basemodelᵢ`. 
 It is equivalent to the residual sum of squares for ordinary linear regression.
-The variable `Δdev` is the difference of the adjacent elements of `dev`, i.e. `Δdevᵢ = devᵢ₋₁ - devᵢ`.
+
+The variable `Δdev` is the difference of `dev` and `basedev`, i.e. `Δdev = dev - basedev`.
+
+`dispersion` is the estimated dispersion (or scale) parameter for `modelₙ`'s distribution.
+
+For ordinary linear regression, 
+`dispersion² = residual sum of squares / degree of freedom of residuals`
 
 ## F-test
 
-The attribute `deviance` of `AnovaResult` is `Δdev`.
+The attribute `deviance` of the returned object is `(Δdev₁, ..., Δdevₙ, NaN)`.
 
-F-statistic is then defined as `Δdev / (dispersion² × degree of freedom)`.
+F-value is a vector `F` such that `Fᵢ = Δdevᵢ / (dispersion² × dofᵢ)` where `dof` is difference of degree of freedom of each model and basemodel pairs.
 
-For type I and III ANOVA, F-statistic is computed directly by the variance-covariance matrix (`vcov`) of the most complex model; the deviance is calculated backward.
-1. Type I:
-
-    First, calculate `f` as the upper factor of Cholesky factorization of `vcov⁻¹ * β`.
-
-    Then, for a factor that starts from ith row/column of the model matrix with `n` degree of freedom, the f-statistic is `Σᵢⁱ⁺ⁿ⁻¹ fₖ² / n`.
-2. Type III: 
-
-    For a factor occupying ith to jth row/column of the model matrix with `n` degree of freedom, the f-statistic is `β[i, ..., j]ᵀ * vcov[i, ..., j; i, ..., j]⁻¹ * β[i, ..., j] / n`.
 
 ## LRT
 
-The attribute `deviance` of `AnovaResult` is `dev`.
+The attribute `deviance` of the returned object is `dev`.
 
 The likelihood ratio is defined as `Δdev / dispersion²`.
 
