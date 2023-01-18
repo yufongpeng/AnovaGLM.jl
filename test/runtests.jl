@@ -93,7 +93,7 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
             #@test @test_error anova_glm(@formula(Cost / Claims ~ 1 + Class), insurance, Gamma(), type = 3) # should be ok without intercept
             @test @test_error anova_glm(@formula(Cost / Claims ~ 0 + Class), insurance, Gamma(), type = 3)
             @test @test_error anova_glm(@formula(Cost / Claims ~ 0 + Class), insurance, Gamma(), type = 2)
-            @test nobs(aov) == nobs(aov.anovamodel.model)
+            @test nobs(aov) == round(Int, nobs(aov.anovamodel.model))
             @test dof(aov) == (1, 4)
             @test isapprox(deviance(aov), AnovaGLM.deviances(FullModel(aov.anovamodel.model, anova_type(aov), false, false)))
             @test isapprox(teststat(aov), (6.163653078060339, 2802.3252386290533))
@@ -103,7 +103,7 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
         @testset "NegativeBinomial regression" begin
             global aov = anova_glm(@formula(Days ~ Eth + Sex + Age + Lrn), quine, NegativeBinomial(2.0), LogLink(), type = 3)
             @test !(@test_error test_show(aov))
-            @test nobs(aov) == nobs(aov.anovamodel.model)
+            @test nobs(aov) == round(Int, nobs(aov.anovamodel.model))
             @test dof(aov) == (1, 1, 1, 3, 1)
             @test anova_test(aov) == FTest
             @test isapprox(deviance(aov), AnovaGLM.deviances(FullModel(aov.anovamodel.model, 3, true, true)))
@@ -152,7 +152,7 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
             gmi = glm(@formula(SepalLength ~ SepalWidth * Species), iris, InverseGaussian())
             global aov = anova(gmi)
             @test !(@test_error test_show(aov))
-            @test nobs(aov) == nobs(gmi)
+            @test nobs(aov) == round(Int, nobs(gmi))
             @test dof(aov) == (1, 2, 2)
             @test isapprox(teststat(aov), (8.172100334461327, 217.34941014323272, 1.8933247444892272))
             @test isapprox(pval(aov), (0.004885873691352542, 3.202701170052312e-44, 0.15429963193830074))
