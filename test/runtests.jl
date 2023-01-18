@@ -78,7 +78,7 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
             global aovf = anova(wlm1, wlm2)
             @test !(@test_error test_show(aov))
             @test !(@test_error test_show(aovf))
-            @test nobs(aov) == sum(aov.anovamodel.model.model.rr.wts)
+            @test nobs(aov) == round(Int, sum(aov.anovamodel.model.model.rr.wts))
             @test dof(aov) == (1, 1)
             @test isapprox(teststat(aov)[2:end], teststat(aovf)[2:end])
         end
