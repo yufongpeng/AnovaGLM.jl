@@ -16,7 +16,7 @@ import GLM: glm,
             updateμ!, cholfactors, 
             # other
             FP, BlasReal, Link, dispersion, deviance, dof, dof_residual, nobs
-using AnovaBase: select_super_interaction, extract_contrasts, canonicalgoodnessoffit, subformula, predictors, dof_asgn, lrt_nested, ftest_nested
+using AnovaBase: select_super_interaction, extract_contrasts, canonicalgoodnessoffit, subformula, predictors, dof_asgn, lrt_nested, ftest_nested, _diff, _diffn
 import AnovaBase: anova, nestedmodels, anovatable, prednames
 export anova_lm, anova_glm
 

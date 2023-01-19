@@ -42,15 +42,15 @@ function anovatable(aov::AnovaResult{<: FullModel{<: TableRegressionModel{<: Gen
               rownames, 4, 3)
 end
 
-function anovatable(aov::AnovaResult{NestedModels{<: TableRegressionModel{<: LinearModel}, N}, FTest}; 
-                    rownames = "x" .* string.(1:N)) where N
+function anovatable(aov::AnovaResult{<: NestedModels{<: TableRegressionModel{<: LinearModel}, N}, FTest}; 
+                    rownames = string.(1:N)) where N
 
     rs = r2.(aov.anovamodel.model)
     Δrs = _diff(rs)
     AnovaTable([
                     dof(aov), 
                     [NaN, _diff(dof(aov))...], 
-                    round(Int, dof_residual(aov.anovamodel.model)), 
+                    repeat([round(Int, dof_residual(last(aov.anovamodel.model)))], N), 
                     rs,
                     [NaN, Δrs...],
                     deviance(aov), 
@@ -62,19 +62,18 @@ function anovatable(aov::AnovaResult{NestedModels{<: TableRegressionModel{<: Lin
               rownames, 9, 8)
 end 
 
-function anovatable(aov::AnovaResult{NestedModels{<: TableRegressionModel{<: LinearModel}, N}, LRT}; 
-                    rownames = "x" .* string.(1:N)) where N
+function anovatable(aov::AnovaResult{<: NestedModels{<: TableRegressionModel{<: LinearModel}, N}, LRT}; 
+                    rownames = string.(1:N)) where N
 
     rs = r2.(aov.anovamodel.model)
     Δrs = _diff(rs)
     AnovaTable([
                     dof(aov), 
                     [NaN, _diff(dof(aov))...], 
-                    round(Int, dof_residual(aov.anovamodel.model)), 
+                    repeat([round(Int, dof_residual(last(aov.anovamodel.model)))], N), 
                     rs,
                     [NaN, Δrs...],
                     deviance(aov), 
-                    [NaN, _diffn(deviance(aov))...], 
                     teststat(aov), 
                     pval(aov)
                 ],

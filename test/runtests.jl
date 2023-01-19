@@ -9,7 +9,6 @@ macro test_error(x)
             $x
             false
         catch e
-            @error e
             true
         end
     end

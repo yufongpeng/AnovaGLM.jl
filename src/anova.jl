@@ -52,7 +52,7 @@ function anova(::Type{FTest}, aovm::FullModel{<: TRM_LM})
     f = formula(aovm.model)
     assign = asgn(predictors(aovm))
     fullasgn = asgn(f)
-    df = tuple(dof_asgn(assign)...)
+    df = dof_asgn(assign)
     varβ = vcov(aovm.model.model)
     β = aovm.model.model.pp.beta0
     offset = first(assign) + last(fullasgn) - last(assign) - 1
@@ -88,7 +88,7 @@ function anova(::Type{FTest},
     devs = deviances(aovm; kwargs...)
     assign = asgn(collect(predictors(aovm)))
     #length(vdf) ≡ length(devs) + 1 && popfirst!(vdf)
-    df = tuple(dof_asgn(assign)...)
+    df = dof_asgn(assign)
     msr = devs ./ df
     fstat = msr ./ dispersion(aovm.model.model, true)
     dfr = round(Int, dof_residual(aovm.model))
@@ -108,7 +108,7 @@ function anova(::Type{LRT},
     Δdev = deviances(aovm)
     assign = asgn(collect(predictors(aovm)))
     #isnullable(trm.model) || popfirst!(vdf)
-    df = tuple(dof_asgn(assign)...)
+    df = dof_asgn(assign)
     # den = last(ss) / (nobs(trm) - dof(trm) + 1)
     # lrstat = ss[1:end - 1] ./ den
     σ² = dispersion(aovm.model.model, true)
