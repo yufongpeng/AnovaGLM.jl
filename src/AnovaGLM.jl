@@ -1,9 +1,9 @@
 module AnovaGLM
 
-using Statistics, StatsBase, LinearAlgebra, Distributions, Reexport, Printf
+using Statistics, StatsBase, LinearAlgebra, Distributions, Reexport, Printf, AnovaBase
 @reexport using GLM, AnovaBase
 import StatsBase: fit!, fit
-import StatsModels: TableRegressionModel, vectorize, ModelFrame, ModelMatrix, response
+import StatsModels: TableRegressionModel, vectorize, ModelFrame, ModelMatrix, response, asgn
 import GLM: glm, 
             # Model
             LinPredModel, AbstractGLM, GeneralizedLinearModel, LinearModel, 
@@ -16,9 +16,8 @@ import GLM: glm,
             updateμ!, cholfactors, 
             # other
             FP, BlasReal, Link, dispersion, deviance, dof, dof_residual, nobs
-import AnovaBase: lrt_nested, ftest_nested, formula, anova, nestedmodels, _diff, _diffn, subformula, selectcoef, dof, dof_residual, deviance, nobs, coefnames, extract_contrasts
-using DataFrames: DataFrame, ByRow, combine
-
+using AnovaBase: select_super_interaction, extract_contrasts, canonicalgoodnessoffit, subformula, predictors, dof_asgn, lrt_nested, ftest_nested, _diff, _diffn
+import AnovaBase: anova, nestedmodels, anovatable, prednames
 export anova_lm, anova_glm
 
 include("anova.jl")

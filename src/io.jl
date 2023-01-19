@@ -1,78 +1,82 @@
 # ======================================================================================================
 # IO
-import AnovaBase: AnovaTable, anovatable
-function coefnames(aov::AnovaResult{T, FTest}) where {T <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}}
-    v = coefnames(aov.model, Val(:anova))
-    push!(v, "(Residuals)")
-    v
-end
-
-coefnames(trm::TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}, anova::Val{:anova}) =
-    vectorize(coefnames(trm.mf.f.rhs, anova))
-
 # anovatable api
-function anovatable(aov::AnovaResult{<: TableRegressionModel{<: LinearModel}, FTest}; kwargs...)
-    AnovaTable(hcat(vectorize.((dof(aov), deviance(aov), deviance(aov) ./ dof(aov), teststat(aov), pval(aov)))...),
+function anovatable(aov::AnovaResult{<: FullModel{<: TableRegressionModel{<: LinearModel}, N}, FTest}; rownames = push!(prednames(aov), "(Residuals)")
+    ) where N
+    dfr = round(Int, dof_residual(aov.anovamodel.model))
+    σ² = dispersion(aov.anovamodel.model.model, true)
+    AnovaTable([
+                [dof(aov)..., dfr], 
+                [deviance(aov)..., dfr * σ²], 
+                [(deviance(aov) ./ dof(aov))..., σ²], 
+                [teststat(aov)..., NaN], 
+                [pval(aov)..., NaN]
+                ],
               ["DOF", "Exp.SS", "Mean Square", "F value","Pr(>|F|)"],
-              ["x$i" for i in eachindex(pval(aov))], 5, 4)
+              rownames, 5, 4)
 end 
 
-function anovatable(aov::AnovaResult{<: TableRegressionModel{<: GeneralizedLinearModel}, FTest}; kwargs...)
-    AnovaTable(hcat(vectorize.((dof(aov), deviance(aov), deviance(aov) ./ dof(aov), teststat(aov), pval(aov)))...),
+function anovatable(aov::AnovaResult{<: FullModel{<: TableRegressionModel{<: GeneralizedLinearModel}, N}, FTest}; rownames = push!(prednames(aov), "(Residuals)")) where N
+    dfr = round(Int, dof_residual(aov.anovamodel.model.model))
+    σ² = dispersion(aov.anovamodel.model.model, true)
+    AnovaTable([
+                [dof(aov)..., dfr], 
+                [deviance(aov)..., dfr * σ²], 
+                [(deviance(aov) ./ dof(aov))..., σ²], 
+                [teststat(aov)..., NaN], 
+                [pval(aov)..., NaN]
+                ],
               ["DOF", "ΔDeviance", "Mean ΔDev", "F value","Pr(>|F|)"],
-              ["x$i" for i in eachindex(pval(aov))], 5, 4)
+              rownames, 5, 4)
 end 
 
-function anovatable(aov::AnovaResult{<: TableRegressionModel{<: LinearModel}, LRT}; kwargs...)
+function anovatable(aov::AnovaResult{<: FullModel{<: TableRegressionModel{<: LinearModel}}, LRT}; rownames = prednames(aov))
     AnovaTable(hcat(vectorize.((dof(aov), deviance(aov), teststat(aov), pval(aov)))...),
               ["DOF", "Res.SS", "χ²", "Pr(>|χ²|)"],
-              ["x$i" for i in eachindex(pval(aov))], 4, 3)
+              rownames, 4, 3)
 end 
 
-function anovatable(aov::AnovaResult{<: TableRegressionModel{<: GeneralizedLinearModel}, LRT}; kwargs...)
+function anovatable(aov::AnovaResult{<: FullModel{<: TableRegressionModel{<: GeneralizedLinearModel}}, LRT}; rownames = prednames(aov))
     AnovaTable(hcat(vectorize.((dof(aov), deviance(aov), teststat(aov), pval(aov)))...),
               ["DOF", "Deviance", "χ²", "Pr(>|χ²|)"],
-              ["x$i" for i in eachindex(pval(aov))], 4, 3)
+              rownames, 4, 3)
 end
 
-function anovatable(aov::AnovaResult{<: Tuple, FTest}, 
-                    modeltype1::Type{<: TableRegressionModel{<: LinearModel}}, 
-                    modeltype2::Type{<: TableRegressionModel{<: LinearModel}};
-                    kwargs...)
+function anovatable(aov::AnovaResult{<: NestedModels{<: TableRegressionModel{<: LinearModel}, N}, FTest}; 
+                    rownames = string.(1:N)) where N
 
-    rs = r2.(aov.model)
+    rs = r2.(aov.anovamodel.model)
     Δrs = _diff(rs)
-    AnovaTable(hcat(vectorize.((
+    AnovaTable([
                     dof(aov), 
                     [NaN, _diff(dof(aov))...], 
-                    dof_residual(aov), 
+                    repeat([round(Int, dof_residual(last(aov.anovamodel.model)))], N), 
                     rs,
                     [NaN, Δrs...],
                     deviance(aov), 
                     [NaN, _diffn(deviance(aov))...], 
                     teststat(aov), 
                     pval(aov)
-                    ))...),
+                ],
               ["DOF", "ΔDOF", "Res.DOF", "R²", "ΔR²", "Res.SS", "Exp.SS", "F value", "Pr(>|F|)"],
-              ["$i" for i in eachindex(pval(aov))], 9, 8)
+              rownames, 9, 8)
 end 
 
-function anovatable(aov::AnovaResult{<: Tuple, LRT}, 
-                    modeltype1::Type{<: TableRegressionModel{<: LinearModel}},
-                    modeltype2::Type{<: TableRegressionModel{<: LinearModel}};
-                    kwargs...)
-    rs = r2.(aov.model)
+function anovatable(aov::AnovaResult{<: NestedModels{<: TableRegressionModel{<: LinearModel}, N}, LRT}; 
+                    rownames = string.(1:N)) where N
+
+    rs = r2.(aov.anovamodel.model)
     Δrs = _diff(rs)
-    AnovaTable(hcat(vectorize.((
+    AnovaTable([
                     dof(aov), 
                     [NaN, _diff(dof(aov))...], 
-                    dof_residual(aov), 
+                    repeat([round(Int, dof_residual(last(aov.anovamodel.model)))], N), 
                     rs,
                     [NaN, Δrs...],
                     deviance(aov), 
                     teststat(aov), 
                     pval(aov)
-                    ))...),
+                ],
               ["DOF", "ΔDOF", "Res.DOF", "R²", "ΔR²", "Res.SS", "χ²", "Pr(>|χ²|)"],
-              ["$i" for i in eachindex(pval(aov))], 8, 7)
+              rownames, 8, 7)
 end 

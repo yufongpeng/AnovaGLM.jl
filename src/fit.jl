@@ -1,89 +1,31 @@
 # ==========================================================================================================
 # Backend funcion
 
-function deviances(trm::TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}, <: AbstractArray{T}}; 
-                    type::Int = 1, kwargs...) where {T <: BlasReal}
-    isa(trm.model.pp, DensePredChol) || throw(
+function deviances(aovm::FullModel{<: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}}; kwargs...)
+    isa(aovm.model.model.pp, DensePredChol) || throw(
             ArgumentError("Methods for other PredChol types is not implemented; use model with DensesPredChol instead."))
-
-    assign, f = trm.mm.assign, formula(trm).rhs
-    # Determine null model by link function
-    ## model with 0 factors as null
-    ## if 0 factor is not allowed, 
-    ### eg, ~ 1 + A + B + ...
-    ### ~ 1 as null
-    ### eg, ~ 0 + A + A & B
-    ### ~ A as null
-    # start value
-    start = isnullable(trm.model) ? 0 : first(assign)
-    err1 = ArgumentError("Invalid set of model specification for ANOVA; not enough variables provided.")
-    err2 = ArgumentError("Invalid set of model specification for ANOVA; try adding variables without zeros.")
-    if type == 1
-        todel = union(start, assign)
-        # ~ 0 + A, ~ 1
-        start > 0 && (length(todel) > 1 || throw(err1))
-        devs = zeros(T, length(todel) + 1)
-        @inbounds for id in eachindex(todel)
-            devs[id] = deviance(trm, @view(todel[id + 1:end]); kwargs...)
-        end
-        devs = -diff(devs)
-    elseif type == 2
-        # Problems with Fullrank promotion occur
-        ## ~ 0 + A (categorical) + B (categorical)
-        ## A is aliased with 1, but 1 is not in formula.
-        ## A is promoted to full rank.
-        ## B is also aliased with 1, but it is not promoted. 
-        ## Doing type 2 and 3 anova cause problem 
-        ## when deleting promoted categorical variables.
-        # Some warning or checks?
-        todel = unique(assign)
-        if start > 0 
-            # ~ 0 + A + A & B, all terms are related to A, ~ A as null
-            selectcoef(f, first(todel)) == Set(todel) && popfirst!(todel)
-            # ~ 0 + A, ~ 1
-            if isempty(todel)
-                throw(err1)
-            # ~ 0 + 2 categorical
-            # Do not inspect InteractionTerm
-            elseif length(todel) == 2
-                all(t -> isa(t, CategoricalTerm), f.terms[todel]) && throw(err2)
-            end
-        end
-        devs = zeros(T, length(todel) + 1)
+    trm = aovm.model
+    if aovm.type ≡ 1
+        ids = union(first(aovm.pred_id) - 1, aovm.pred_id)
+        devs = -diff(map(i -> deviance(trm, @view(ids[i + 1:end]); kwargs...), eachindex(ids)))
+    elseif aovm.type ≡ 2
+        devs = zeros(Float64, length(aovm.pred_id))
         # cache fitted
-        dict_devs = Dict{Set{Int}, T}()
-        @inbounds for (id, del) in enumerate(todel)
-            delcoef = selectcoef(f, del)
-            dev1 = get(dict_devs, delcoef, (push!(dict_devs, delcoef => deviance(trm, delcoef; kwargs...)); dict_devs[delcoef]))
+        dict_devs = Dict{Set{Int}, Float64}()
+        f = formula(aovm.model).rhs
+        @inbounds for (id, del) in enumerate(aovm.pred_id)
+            delcoef = select_super_interaction(f, del)
+            dev1 = get!(dict_devs, delcoef, deviance(trm, delcoef; kwargs...))
             delete!(delcoef, del)
-            dev2 = get(dict_devs, delcoef, (push!(dict_devs, delcoef => deviance(trm, delcoef; kwargs...)); dict_devs[delcoef]))
+            dev2 = get!(dict_devs, delcoef, deviance(trm, delcoef; kwargs...))
             devs[id] = dev1 - dev2
         end
-        devs[end] = deviance(trm, 0; kwargs...)
     else
-        todel = unique(assign)
-        if start > 0 
-            # ~ 0 + A, ~ 1
-            if length(todel) <= 1
-                throw(err1)
-            # ~ 0 + 2 categorical or 
-            # ~ 1 + 1 categorical
-            # Do not inspect InteractionTerm
-            elseif length(todel) == 2
-                if isa(f.terms[todel][1], Union{CategoricalTerm, InterceptTerm{true}})
-                    isa(f.terms[todel][2], CategoricalTerm) && throw(err2)
-                end
-            end
-        end
-        devs = zeros(T, length(todel) + 1)
-        @inbounds for (id, del) in enumerate(todel)
-            devs[id] = deviance(trm, del; kwargs...)
-        end
         devr = deviance(trm, 0; kwargs...)
-        devs .-= devr
-        devs[end] = devr
+        devs = map(del -> deviance(trm, del; kwargs...) - devr, aovm.pred_id)
     end
     # every method end with deviance(trm, 0; kwargs...), ie full model fit.
+    deviance(trm, 0; kwargs...)
     installbeta!(trm.model.pp) # ensure model unchanged
     tuple(devs...)
 end
@@ -275,14 +217,14 @@ function linpred!(out, p::LinPred, X::Matrix, f::Real = 1.0)
 end
 
 # Create nestedmodels
-@doc """
+"""
     nestedmodels(trm::TableRegressionModel{<: LinearModel}; null::Bool = true, <keyword arguments>)
     nestedmodels(trm::TableRegressionModel{<: GeneralizedLinearModel}; null::Bool = true, <keyword arguments>)
 
     nestedmodels(::Type{LinearModel}, formula, data; null::Bool = true, <keyword arguments>)
     nestedmodels(::Type{GeneralizedLinearModel}, formula, data, distr::UnivariateDistribution, link::Link = canonicallink(d); null::Bool = true, <keyword arguments>)
 
-Generate nested models from a model or formula and data.
+Generate nested nested models `NestedModels` from a model or formula and data.
 
 The null model will be a model with at least one factor (including intercept) if the link function does not allow factors to be 0 (factors in denominators) or the keyword argument `null` is false (default value is true).
 * `InverseLink` for `Gamma`
@@ -290,11 +232,9 @@ The null model will be a model with at least one factor (including intercept) if
 * `LinearModel` fitted with `CholeskyPivoted` when `dropcollinear = true`
 Otherwise, it will be an empty model.
 """
-nestedmodels(::Val{:AnovaGLM})
-
-function nestedmodels(trm::TableRegressionModel{<: LinearModel}; null::Bool = true, kwargs...)
-    null = null && isnullable(trm.model.pp.chol)
-    assign = unique(trm.mm.assign)
+function nestedmodels(trm::M; null::Bool = true, kwargs...) where {M <: TableRegressionModel{<: LinearModel}}
+    null = null && isnullable(trm.model.pp.chol) || (@warn "Empty model is not allowed due to `CholeskyPivoted`"; false)
+    assign = unique(asgn(formula(trm)))
     pop!(assign)
     dropcollinear, range = null ? (false, union(0, assign)) : (true, assign)
     wts = trm.model.rr.wts
@@ -304,11 +244,11 @@ function nestedmodels(trm::TableRegressionModel{<: LinearModel}; null::Bool = tr
         y = response(mf)
         TableRegressionModel(fit(trm.mf.model, mm.m, y; wts, dropcollinear, kwargs...), mf, mm)
     end
-    (trms..., trm)
+    NestedModels{M}(trms..., trm)
 end
 
-function nestedmodels(trm::TableRegressionModel{<: GeneralizedLinearModel}; null::Bool = true, kwargs...)
-    null = null && isnullable(trm.model)
+function nestedmodels(trm::M; null::Bool = true, kwargs...) where {M <: TableRegressionModel{<: GeneralizedLinearModel}}
+    null = null && isnullable(trm.model) && isnullable(trm.model.pp.chol) || (@warn "Empty model is not allowed due to `CholeskyPivoted`"; false) 
     distr = trm.model.rr.d
     link = typeof(trm.model.rr).parameters[3]()
     wts = trm.model.rr.wts
@@ -322,13 +262,12 @@ function nestedmodels(trm::TableRegressionModel{<: GeneralizedLinearModel}; null
         y = response(mf)
         TableRegressionModel(fit(trm.mf.model, mm.m, y, distr, link; wts, offset, kwargs...), mf, mm)
     end
-    (trms..., trm)
+    NestedModels{M}(trms..., trm)
 end
 
-
-nestedmodels(::Type{LinearModel}, formula, data; null::Bool = true, kwargs...) = 
+nestedmodels(::Type{LinearModel}, formula::FormulaTerm, data; null::Bool = true, kwargs...) = 
     nestedmodels(lm(formula, data; kwargs...); null, kwargs...)
-nestedmodels(::Type{GeneralizedLinearModel}, formula, data, 
+nestedmodels(::Type{GeneralizedLinearModel}, formula::FormulaTerm, data, 
                 distr::UnivariateDistribution, link::Link = canonicallink(distr); 
                 null::Bool = true, kwargs...) = 
     nestedmodels(glm(formula, data, distr, link; kwargs...); null, kwargs...)
