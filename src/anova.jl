@@ -48,9 +48,9 @@ anova(::Type{FTest},
     type::Int = 1, kwargs...) = anova(FTest, FullModel(trm, type, isnullable(trm.model), true); kwargs...)
 
 function anova(::Type{FTest}, aovm::FullModel{<: TRM_LM})
-    f = formula(aovm.model)
     assign = asgn(predictors(aovm))
-    fullasgn = asgn(f)
+    fullpred = predictors(aovm.model)
+    fullasgn = asgn(fullpred)
     df = dof_asgn(assign)
     varβ = vcov(aovm.model.model)
     β = aovm.model.model.pp.beta0
@@ -62,7 +62,7 @@ function anova(::Type{FTest}, aovm::FullModel{<: TRM_LM})
         end
     elseif aovm.type == 2
         fstat = ntuple(last(fullasgn) - offset) do fix
-            select1 = sort!(collect(select_super_interaction(f.rhs, fix + offset)))
+            select1 = sort!(collect(select_super_interaction(fullpred, fix + offset)))
             select2 = setdiff(select1, fix + offset)
             select1 = findall(in(select1), fullasgn)
             select2 = findall(in(select2), fullasgn)
