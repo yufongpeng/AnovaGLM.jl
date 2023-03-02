@@ -17,12 +17,11 @@ Return `AnovaResult{M, test, N}`. See [`AnovaResult`](@ref) for details.
     1. `TableRegressionModel{<: LinearModel}`: `FTest`.
     2. `TableRegressionModel{<: GeneralizedLinearModel}`: based on distribution function, see `canonicalgoodnessoffit`.
 
-## Other keyword arguments
+# Other keyword arguments
 * When one model is provided:  
     1. `type` specifies type of anova (1, 2 or 3). Default value is 1.
 * When multiple models are provided:  
     1. `check`: allows to check if models are nested. Defalut value is true. Some checkers are not implemented now.
-    2. `isnested`: true when models are checked as nested (manually or automatically). Defalut value is false. 
 
 !!! note
     For fitting new models and conducting anova at the same time, see [`anova_lm`](@ref) for `LinearModel`, [`anova_glm`](@ref) for `GeneralizedLinearModel`.
@@ -67,13 +66,13 @@ function anova(::Type{FTest}, aovm::FullModel{<: TRM_LM})
             select2 = setdiff(select1, fix + offset)
             select1 = findall(in(select1), fullasgn)
             select2 = findall(in(select2), fullasgn)
-            (β[select1]' * inv(varβ[select1, select1]) * β[select1] - β[select2]' * inv(varβ[select2, select2]) * β[select2]) / df[fix]
+            (β[select1]' * (varβ[select1, select1] \ β[select1]) - β[select2]' * (varβ[select2, select2] \ β[select2])) / df[fix]
         end
     else
         # calculate block by block
         fstat = ntuple(last(fullasgn) - offset) do fix
             select = findall(==(fix + offset), fullasgn)
-            β[select]' * inv(varβ[select, select]) * β[select] / df[fix]
+            β[select]' * (varβ[select, select] \ β[select]) / df[fix]
         end
     end
     σ² = dispersion(aovm.model.model, true)
@@ -129,8 +128,7 @@ end
 
 function anova(::Type{FTest}, 
         trms::Vararg{M}; 
-        check::Bool = true,
-        isnested::Bool = false) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}}  
+        check::Bool = true) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}}  
     df = dof.(trms)
     ord = sortperm(collect(df))
     df = df[ord]
@@ -144,8 +142,7 @@ end
 
 function anova(::Type{LRT}, 
         trms::Vararg{M}; 
-        check::Bool = true,
-        isnested::Bool = false) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}}  
+        check::Bool = true) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}}  
     df = dof.(trms)
     ord = sortperm(collect(df))
     trms = trms[ord]
@@ -170,7 +167,12 @@ end
 
 ANOVA for simple linear regression.
 
-The arguments `X` and `y` can be a `Matrix` and a `Vector` or a `Formula` and a `DataFrame`. 
+# Arguments
+* `X` and `y` can be a `Matrix` and a `Vector` or a `Formula` and a `Tables.jl` compatible data. 
+* `test`: test statistics for goodness of fit.
+
+# Keyword arguments
+* `test`: test statistics for goodness of fit.
 * `type` specifies type of anova (1, 2 or 3). Default value is 1.
 * `dropcollinear` controls whether or not `lm` accepts a model matrix which is less-than-full rank. If true (the default), only the first of each set of linearly-dependent columns is used. The coefficient for redundant linearly dependent columns is 0.0 and all associated statistics are set to NaN.
 
@@ -188,7 +190,7 @@ function anova(test::Type{<: GoodnessOfFit}, ::Type{LinearModel}, X, y;
         type::Int = 1, 
         kwargs...)
     model = lm(X, y; kwargs...)
-    anova(test, model; type = type)
+    anova(test, model; type)
 end
 
 """
@@ -201,9 +203,11 @@ end
 
 ANOVA for genaralized linear models.
 
-The arguments `X` and `y` can be a `Matrix` and a `Vector` or a `Formula` and a `DataFrame`. 
+# Arguments
+* `X` and `y` can be a `Matrix` and a `Vector` or a `Formula` and a `Tables.jl` compatible data.
 * `d`: a `GLM.UnivariateDistribution`.
 * `l`: a `GLM.Link`
+* `test`: test statistics for goodness of fit based on distribution function. See `canonicalgoodnessoffit`.
 
 For other keyword arguments, see `fit`.
 """
