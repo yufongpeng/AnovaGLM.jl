@@ -44,12 +44,13 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
 @testset "AnovaGLM.jl" begin
     @testset "LinearModel" begin 
         @testset "Simple linear regression" begin
-            lm0, lm1, lm2, lm3, lm4 = nestedmodels(LinearModel, @formula(SepalLength ~ SepalWidth * Species), iris, dropcollinear = false).model
+            lms = nestedmodels(LinearModel, @formula(SepalLength ~ SepalWidth * Species), iris, dropcollinear = false)
+            lm0, lm1, lm2, lm3, lm4 = lms.model
             global aov3 = anova(lm4, type = 3)
             global aov2 = anova_lm(@formula(SepalLength ~ SepalWidth * Species), iris, type = 2)
-            global aov1 = anova(lm4)
+            global aov1 = anova(FullModel(lm4, 1, true, true))
             global aovf = anova(lm0, lm1, lm2, lm3, lm4)
-            global aovlr = anova(LRT, lm0, lm1, lm2, lm3, lm4)
+            global aovlr = anova(LRT, lms)
             global aov1lr = anova(LRT, lm4)
             global aovlf = anova_lm(FTest, @formula(wdi_lifexp ~ log(gle_rgdpc) * ti_cpi), qog18, type = 2)
             ft = ftest(lm1.model, lm2.model, lm3.model, lm4.model)
@@ -111,9 +112,9 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
         end
     
         @testset "Poisson regression" begin
-            gmp = nestedmodels(GeneralizedLinearModel, @formula(num_awards ~ prog * math), sim, Poisson()).model
-            global aov = anova(gmp...)
-            lr = lrtest(gmp...)
+            gmp = nestedmodels(GeneralizedLinearModel, @formula(num_awards ~ prog * math), sim, Poisson())
+            global aov = anova(gmp)
+            lr = lrtest(gmp.model...)
             @test !(@test_error test_show(aov))
             @test first(nobs(aov)) == lr.nobs
             @test dof(aov) == lr.dof
@@ -149,7 +150,7 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
     
         @testset "InverseGaussian regression" begin
             gmi = glm(@formula(SepalLength ~ SepalWidth * Species), iris, InverseGaussian())
-            global aov = anova(gmi)
+            global aov = anova(FullModel(gmi, 1, false, false))
             @test !(@test_error test_show(aov))
             @test nobs(aov) == round(Int, nobs(gmi))
             @test dof(aov) == (1, 2, 2)

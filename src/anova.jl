@@ -2,7 +2,9 @@
 # Main API
 """
     anova(<glmmodels>...; test::Type{<: GoodnessOfFit},  <keyword arguments>)
+    anova(<anovamodel>; test::Type{<: GoodnessOfFit},  <keyword arguments>)
     anova(test::Type{<: GoodnessOfFit}, <glmmodels>...;  <keyword arguments>)
+    anova(test::Type{<: GoodnessOfFit}, <anovamodel>;  <keyword arguments>)
 
 Analysis of variance.
 
@@ -13,6 +15,7 @@ Return `AnovaResult{M, test, N}`. See [`AnovaResult`](@ref) for details.
     1. `TableRegressionModel{<: LinearModel}` fitted by `GLM.lm`
     2. `TableRegressionModel{<: GeneralizedLinearModel}` fitted by `GLM.glm`
     If mutiple models are provided, they should be nested and the last one is the most complex.
+* `anovamodel`: wrapped model objects; `FullModel` and `NestedModels`.
 * `test`: test statistics for goodness of fit. Available tests are [`LikelihoodRatioTest`](@ref) ([`LRT`](@ref)) and [`FTest`](@ref). The default is based on the model type.
     1. `TableRegressionModel{<: LinearModel}`: `FTest`.
     2. `TableRegressionModel{<: GeneralizedLinearModel}`: based on distribution function, see `canonicalgoodnessoffit`.
@@ -33,10 +36,30 @@ anova(models::Vararg{TableRegressionModel{<: LinearModel}};
         kwargs...) = 
     anova(test, models...; kwargs...)
 
+anova(models::FullModel{<: TableRegressionModel{<: LinearModel}}; 
+        test::Type{<: GoodnessOfFit} = FTest,
+        kwargs...) = 
+    anova(test, models; kwargs...)
+
+anova(anovamodel::NestedModels{<: TableRegressionModel{<: LinearModel}}; 
+        test::Type{<: GoodnessOfFit} = FTest,
+        kwargs...) = 
+    anova(test, anovamodel; kwargs...)
+
 anova(models::Vararg{TableRegressionModel{<: GeneralizedLinearModel}}; 
         test::Type{<: GoodnessOfFit} = canonicalgoodnessoffit(models[1].model.rr.d),
         kwargs...) = 
     anova(test, models...; kwargs...)
+
+anova(anovamodel::FullModel{<: TableRegressionModel{<: GeneralizedLinearModel}}; 
+        test::Type{<: GoodnessOfFit} = canonicalgoodnessoffit(anovamodel.model.model.rr.d),
+        kwargs...) = 
+    anova(test, anovamodel; kwargs...)
+
+anova(anovamodel::NestedModels{<: TableRegressionModel{<: GeneralizedLinearModel}}; 
+        test::Type{<: GoodnessOfFit} = canonicalgoodnessoffit(anovamodel.model[1].model.rr.d),
+        kwargs...) = 
+    anova(test, anovamodel; kwargs...)
 
 # ==================================================================================================================
 # ANOVA by F test 
@@ -152,7 +175,11 @@ function anova(::Type{LRT},
     lrt_nested(NestedModels{M}(trms), df, deviance.(trms), dispersion(last(trms).model, true))
 end
 
+anova(::Type{FTest}, anovamodel::NestedModels{M}) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}} =
+    ftest_nested(anovamodel, dof.(anovamodel.model), round.(Int, dof_residual.(anovamodel.model)), deviance.(anovamodel.model), dispersion(last(anovamodel.model).model, true))
 
+anova(::Type{LRT}, anovamodel::NestedModels{M}) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}} =
+    lrt_nested(anovamodel, dof.(anovamodel.model), deviance.(anovamodel.model), dispersion(last(anovamodel.model).model, true))
 # =================================================================================================================================
 # Fit new models
 
