@@ -2,7 +2,9 @@
 # Main API
 """
     anova(<glmmodels>...; test::Type{<: GoodnessOfFit},  <keyword arguments>)
+    anova(<anovamodel>; test::Type{<: GoodnessOfFit},  <keyword arguments>)
     anova(test::Type{<: GoodnessOfFit}, <glmmodels>...;  <keyword arguments>)
+    anova(test::Type{<: GoodnessOfFit}, <anovamodel>;  <keyword arguments>)
 
 Analysis of variance.
 
@@ -13,16 +15,16 @@ Return `AnovaResult{M, test, N}`. See [`AnovaResult`](@ref) for details.
     1. `TableRegressionModel{<: LinearModel}` fitted by `GLM.lm`
     2. `TableRegressionModel{<: GeneralizedLinearModel}` fitted by `GLM.glm`
     If mutiple models are provided, they should be nested and the last one is the most complex.
+* `anovamodel`: wrapped model objects; `FullModel` and `NestedModels`.
 * `test`: test statistics for goodness of fit. Available tests are [`LikelihoodRatioTest`](@ref) ([`LRT`](@ref)) and [`FTest`](@ref). The default is based on the model type.
     1. `TableRegressionModel{<: LinearModel}`: `FTest`.
     2. `TableRegressionModel{<: GeneralizedLinearModel}`: based on distribution function, see `canonicalgoodnessoffit`.
 
-## Other keyword arguments
+# Other keyword arguments
 * When one model is provided:  
     1. `type` specifies type of anova (1, 2 or 3). Default value is 1.
 * When multiple models are provided:  
     1. `check`: allows to check if models are nested. Defalut value is true. Some checkers are not implemented now.
-    2. `isnested`: true when models are checked as nested (manually or automatically). Defalut value is false. 
 
 !!! note
     For fitting new models and conducting anova at the same time, see [`anova_lm`](@ref) for `LinearModel`, [`anova_glm`](@ref) for `GeneralizedLinearModel`.
@@ -34,10 +36,30 @@ anova(models::Vararg{TableRegressionModel{<: LinearModel}};
         kwargs...) = 
     anova(test, models...; kwargs...)
 
+anova(models::FullModel{<: TableRegressionModel{<: LinearModel}}; 
+        test::Type{<: GoodnessOfFit} = FTest,
+        kwargs...) = 
+    anova(test, models; kwargs...)
+
+anova(anovamodel::NestedModels{<: TableRegressionModel{<: LinearModel}}; 
+        test::Type{<: GoodnessOfFit} = FTest,
+        kwargs...) = 
+    anova(test, anovamodel; kwargs...)
+
 anova(models::Vararg{TableRegressionModel{<: GeneralizedLinearModel}}; 
         test::Type{<: GoodnessOfFit} = canonicalgoodnessoffit(models[1].model.rr.d),
         kwargs...) = 
     anova(test, models...; kwargs...)
+
+anova(anovamodel::FullModel{<: TableRegressionModel{<: GeneralizedLinearModel}}; 
+        test::Type{<: GoodnessOfFit} = canonicalgoodnessoffit(anovamodel.model.model.rr.d),
+        kwargs...) = 
+    anova(test, anovamodel; kwargs...)
+
+anova(anovamodel::NestedModels{<: TableRegressionModel{<: GeneralizedLinearModel}}; 
+        test::Type{<: GoodnessOfFit} = canonicalgoodnessoffit(anovamodel.model[1].model.rr.d),
+        kwargs...) = 
+    anova(test, anovamodel; kwargs...)
 
 # ==================================================================================================================
 # ANOVA by F test 
@@ -49,9 +71,9 @@ anova(::Type{FTest},
     type::Int = 1, kwargs...) = anova(FTest, FullModel(trm, type, isnullable(trm.model), true); kwargs...)
 
 function anova(::Type{FTest}, aovm::FullModel{<: TRM_LM})
-    f = formula(aovm.model)
     assign = asgn(predictors(aovm))
-    fullasgn = asgn(f)
+    fullpred = predictors(aovm.model)
+    fullasgn = asgn(fullpred)
     df = dof_asgn(assign)
     varβ = vcov(aovm.model.model)
     β = aovm.model.model.pp.beta0
@@ -63,17 +85,17 @@ function anova(::Type{FTest}, aovm::FullModel{<: TRM_LM})
         end
     elseif aovm.type == 2
         fstat = ntuple(last(fullasgn) - offset) do fix
-            select1 = sort!(collect(select_super_interaction(f.rhs, fix + offset)))
+            select1 = sort!(collect(select_super_interaction(fullpred, fix + offset)))
             select2 = setdiff(select1, fix + offset)
             select1 = findall(in(select1), fullasgn)
             select2 = findall(in(select2), fullasgn)
-            (β[select1]' * inv(varβ[select1, select1]) * β[select1] - β[select2]' * inv(varβ[select2, select2]) * β[select2]) / df[fix]
+            (β[select1]' * (varβ[select1, select1] \ β[select1]) - β[select2]' * (varβ[select2, select2] \ β[select2])) / df[fix]
         end
     else
         # calculate block by block
         fstat = ntuple(last(fullasgn) - offset) do fix
             select = findall(==(fix + offset), fullasgn)
-            β[select]' * inv(varβ[select, select]) * β[select] / df[fix]
+            β[select]' * (varβ[select, select] \ β[select]) / df[fix]
         end
     end
     σ² = dispersion(aovm.model.model, true)
@@ -129,8 +151,7 @@ end
 
 function anova(::Type{FTest}, 
         trms::Vararg{M}; 
-        check::Bool = true,
-        isnested::Bool = false) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}}  
+        check::Bool = true) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}}  
     df = dof.(trms)
     ord = sortperm(collect(df))
     df = df[ord]
@@ -144,8 +165,7 @@ end
 
 function anova(::Type{LRT}, 
         trms::Vararg{M}; 
-        check::Bool = true,
-        isnested::Bool = false) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}}  
+        check::Bool = true) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}}  
     df = dof.(trms)
     ord = sortperm(collect(df))
     trms = trms[ord]
@@ -155,7 +175,11 @@ function anova(::Type{LRT},
     lrt_nested(NestedModels{M}(trms), df, deviance.(trms), dispersion(last(trms).model, true))
 end
 
+anova(::Type{FTest}, anovamodel::NestedModels{M}) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}} =
+    ftest_nested(anovamodel, dof.(anovamodel.model), round.(Int, dof_residual.(anovamodel.model)), deviance.(anovamodel.model), dispersion(last(anovamodel.model).model, true))
 
+anova(::Type{LRT}, anovamodel::NestedModels{M}) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}} =
+    lrt_nested(anovamodel, dof.(anovamodel.model), deviance.(anovamodel.model), dispersion(last(anovamodel.model).model, true))
 # =================================================================================================================================
 # Fit new models
 
@@ -170,7 +194,12 @@ end
 
 ANOVA for simple linear regression.
 
-The arguments `X` and `y` can be a `Matrix` and a `Vector` or a `Formula` and a `DataFrame`. 
+# Arguments
+* `X` and `y` can be a `Matrix` and a `Vector` or a `Formula` and a `Tables.jl` compatible data. 
+* `test`: test statistics for goodness of fit.
+
+# Keyword arguments
+* `test`: test statistics for goodness of fit.
 * `type` specifies type of anova (1, 2 or 3). Default value is 1.
 * `dropcollinear` controls whether or not `lm` accepts a model matrix which is less-than-full rank. If true (the default), only the first of each set of linearly-dependent columns is used. The coefficient for redundant linearly dependent columns is 0.0 and all associated statistics are set to NaN.
 
@@ -188,7 +217,7 @@ function anova(test::Type{<: GoodnessOfFit}, ::Type{LinearModel}, X, y;
         type::Int = 1, 
         kwargs...)
     model = lm(X, y; kwargs...)
-    anova(test, model; type = type)
+    anova(test, model; type)
 end
 
 """
@@ -201,9 +230,11 @@ end
 
 ANOVA for genaralized linear models.
 
-The arguments `X` and `y` can be a `Matrix` and a `Vector` or a `Formula` and a `DataFrame`. 
+# Arguments
+* `X` and `y` can be a `Matrix` and a `Vector` or a `Formula` and a `Tables.jl` compatible data.
 * `d`: a `GLM.UnivariateDistribution`.
 * `l`: a `GLM.Link`
+* `test`: test statistics for goodness of fit based on distribution function. See `canonicalgoodnessoffit`.
 
 For other keyword arguments, see `fit`.
 """
