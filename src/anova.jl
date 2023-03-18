@@ -41,25 +41,25 @@ anova(models::FullModel{<: TableRegressionModel{<: LinearModel}};
         kwargs...) = 
     anova(test, models; kwargs...)
 
-anova(anovamodel::NestedModels{<: TableRegressionModel{<: LinearModel}}; 
+anova(aovm::NestedModels{<: TableRegressionModel{<: LinearModel}}; 
         test::Type{<: GoodnessOfFit} = FTest,
         kwargs...) = 
-    anova(test, anovamodel; kwargs...)
+    anova(test, aovm; kwargs...)
 
 anova(models::Vararg{TableRegressionModel{<: GeneralizedLinearModel}}; 
         test::Type{<: GoodnessOfFit} = canonicalgoodnessoffit(models[1].model.rr.d),
         kwargs...) = 
     anova(test, models...; kwargs...)
 
-anova(anovamodel::FullModel{<: TableRegressionModel{<: GeneralizedLinearModel}}; 
-        test::Type{<: GoodnessOfFit} = canonicalgoodnessoffit(anovamodel.model.model.rr.d),
+anova(aovm::FullModel{<: TableRegressionModel{<: GeneralizedLinearModel}}; 
+        test::Type{<: GoodnessOfFit} = canonicalgoodnessoffit(aovm.model.model.rr.d),
         kwargs...) = 
-    anova(test, anovamodel; kwargs...)
+    anova(test, aovm; kwargs...)
 
-anova(anovamodel::NestedModels{<: TableRegressionModel{<: GeneralizedLinearModel}}; 
-        test::Type{<: GoodnessOfFit} = canonicalgoodnessoffit(anovamodel.model[1].model.rr.d),
+anova(aovm::NestedModels{<: TableRegressionModel{<: GeneralizedLinearModel}}; 
+        test::Type{<: GoodnessOfFit} = canonicalgoodnessoffit(aovm.model[1].model.rr.d),
         kwargs...) = 
-    anova(test, anovamodel; kwargs...)
+    anova(test, aovm; kwargs...)
 
 # ==================================================================================================================
 # ANOVA by F test 
@@ -74,7 +74,7 @@ function anova(::Type{FTest}, aovm::FullModel{<: TRM_LM})
     assign = asgn(predictors(aovm))
     fullpred = predictors(aovm.model)
     fullasgn = asgn(fullpred)
-    df = dof_asgn(assign)
+    df = tuple(dof_asgn(assign)...)
     varβ = vcov(aovm.model.model)
     β = aovm.model.model.pp.beta0
     offset = first(assign) + last(fullasgn) - last(assign) - 1
@@ -110,7 +110,7 @@ function anova(::Type{FTest},
     devs = deviances(aovm; kwargs...)
     assign = asgn(collect(predictors(aovm)))
     #length(vdf) ≡ length(devs) + 1 && popfirst!(vdf)
-    df = dof_asgn(assign)
+    df = tuple(dof_asgn(assign)...)
     msr = devs ./ df
     fstat = msr ./ dispersion(aovm.model.model, true)
     dfr = round(Int, dof_residual(aovm.model))
@@ -130,7 +130,7 @@ function anova(::Type{LRT},
     Δdev = deviances(aovm)
     assign = asgn(collect(predictors(aovm)))
     #isnullable(trm.model) || popfirst!(vdf)
-    df = dof_asgn(assign)
+    df = tuple(dof_asgn(assign)...)
     # den = last(ss) / (nobs(trm) - dof(trm) + 1)
     # lrstat = ss[1:end - 1] ./ den
     σ² = dispersion(aovm.model.model, true)
@@ -175,11 +175,11 @@ function anova(::Type{LRT},
     lrt_nested(NestedModels{M}(trms), df, deviance.(trms), dispersion(last(trms).model, true))
 end
 
-anova(::Type{FTest}, anovamodel::NestedModels{M}) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}} =
-    ftest_nested(anovamodel, dof.(anovamodel.model), round.(Int, dof_residual.(anovamodel.model)), deviance.(anovamodel.model), dispersion(last(anovamodel.model).model, true))
+anova(::Type{FTest}, aovm::NestedModels{M}) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}} =
+    ftest_nested(aovm, dof.(aovm.model), round.(Int, dof_residual.(aovm.model)), deviance.(aovm.model), dispersion(last(aovm.model).model, true))
 
-anova(::Type{LRT}, anovamodel::NestedModels{M}) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}} =
-    lrt_nested(anovamodel, dof.(anovamodel.model), deviance.(anovamodel.model), dispersion(last(anovamodel.model).model, true))
+anova(::Type{LRT}, aovm::NestedModels{M}) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}} =
+    lrt_nested(aovm, dof.(aovm.model), deviance.(aovm.model), dispersion(last(aovm.model).model, true))
 # =================================================================================================================================
 # Fit new models
 
