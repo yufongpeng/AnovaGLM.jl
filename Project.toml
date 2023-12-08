@@ -1,7 +1,7 @@
 name = "AnovaGLM"
 uuid = "0a47a8e3-ec57-451e-bddb-e0be9d22772b"
 authors = ["Yu-Fong Peng <sciphypar@gmail.com>"]
-version = "0.2.2"
+version = "0.2.3"
 
 [deps]
 AnovaBase = "946dddda-6a23-4b48-8e70-8e60d9b8d680"
@@ -17,8 +17,8 @@ StatsModels = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
 [compat]
 AnovaBase = "0.7"
 Distributions = "0.23, 0.24, 0.25"
-GLM = "1.8"
+GLM = "1.9"
 Reexport = "0.2, 1"
-StatsBase = "0.33"
-StatsModels = "0.6"
-julia = "1.6, 1.7, 1.8"
+StatsBase = "0.33, 0.34"
+StatsModels = "0.7"
+julia = "1.6, 1.7, 1.8, 1.9"
