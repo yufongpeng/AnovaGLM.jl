@@ -86,7 +86,7 @@ function anova(::Type{FTest}, aovm::FullModel{<: TRM_LM})
     elseif aovm.type == 2
         fstat = ntuple(last(fullasgn) - offset) do fix
             s1 = sort!(collect(select_super_interaction(fullpred, fix + offset)))
-            s2 = setdiff(select1, fix + offset)
+            s2 = setdiff(s1, fix + offset)
             select1 = findall(in(s1), fullasgn)
             select2 = findall(in(s2), fullasgn)
             (β[select1]' * (varβ[select1, select1] \ β[select1]) - β[select2]' * (varβ[select2, select2] \ β[select2])) / df[fix]
