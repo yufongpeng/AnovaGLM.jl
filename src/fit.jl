@@ -244,7 +244,7 @@ function nestedmodels(trm::M; null::Bool = true, kwargs...) where {M <: TableReg
         y = response(mf)
         TableRegressionModel(fit(trm.mf.model, mm.m, y; wts, dropcollinear, kwargs...), mf, mm)
     end
-    NestedModels{M}(trms..., trm)
+    NestedModels(trms..., trm)
 end
 
 function nestedmodels(trm::M; null::Bool = true, kwargs...) where {M <: TableRegressionModel{<: GeneralizedLinearModel}}
@@ -262,7 +262,7 @@ function nestedmodels(trm::M; null::Bool = true, kwargs...) where {M <: TableReg
         y = response(mf)
         TableRegressionModel(fit(trm.mf.model, mm.m, y, distr, link; wts, offset, kwargs...), mf, mm)
     end
-    NestedModels{M}(trms..., trm)
+    NestedModels(trms..., trm)
 end
 
 nestedmodels(::Type{LinearModel}, formula::FormulaTerm, data; null::Bool = true, kwargs...) = 
