@@ -85,10 +85,10 @@ function anova(::Type{FTest}, aovm::FullModel{<: TRM_LM})
         end
     elseif aovm.type == 2
         fstat = ntuple(last(fullasgn) - offset) do fix
-            select1 = sort!(collect(select_super_interaction(fullpred, fix + offset)))
-            select2 = setdiff(select1, fix + offset)
-            select1 = findall(in(select1), fullasgn)
-            select2 = findall(in(select2), fullasgn)
+            s1 = sort!(collect(select_super_interaction(fullpred, fix + offset)))
+            s2 = setdiff(select1, fix + offset)
+            select1 = findall(in(s1), fullasgn)
+            select2 = findall(in(s2), fullasgn)
             (β[select1]' * (varβ[select1, select1] \ β[select1]) - β[select2]' * (varβ[select2, select2] \ β[select2])) / df[fix]
         end
     else
@@ -102,7 +102,7 @@ function anova(::Type{FTest}, aovm::FullModel{<: TRM_LM})
     devs = @. fstat * σ² * df
     dfr = round(Int, dof_residual(aovm.model))
     pvalue = @. ccdf(FDist(df, dfr), abs(fstat))
-    AnovaResult{FTest}(aovm, df, devs, fstat, pvalue, NamedTuple())
+    AnovaResult(aovm, FTest, df, devs, fstat, pvalue, NamedTuple())
 end
 
 function anova(::Type{FTest}, 
@@ -115,7 +115,7 @@ function anova(::Type{FTest},
     fstat = msr ./ dispersion(aovm.model.model, true)
     dfr = round(Int, dof_residual(aovm.model))
     pvalue = @. ccdf(FDist(df, dfr), abs(fstat))
-    AnovaResult{FTest}(aovm, df, devs, fstat, pvalue, NamedTuple())
+    AnovaResult(aovm, FTest, df, devs, fstat, pvalue, NamedTuple())
 end
 
 # ----------------------------------------------------------------------------------------
@@ -143,7 +143,7 @@ function anova(::Type{LRT},
         i -= 1
     end
     pval = @. ccdf(Chisq(df), abs(lrstat))
-    AnovaResult{LRT}(aovm, df, tuple(dev[2:end]...), lrstat, pval, NamedTuple())
+    AnovaResult(aovm, LRT, df, tuple(dev[2:end]...), lrstat, pval, NamedTuple())
 end
 
 # =================================================================================================================
@@ -160,7 +160,7 @@ function anova(::Type{FTest},
     # May exist some floating point error from dof_residual
     # check comparable and nested
     check && @warn "Could not check whether models are nested: results may not be meaningful"
-    ftest_nested(NestedModels{M}(trms), df, dfr, deviance.(trms), dispersion(last(trms).model, true))
+    ftest_nested(NestedModels(trms), df, dfr, deviance.(trms), dispersion(last(trms).model, true))
 end
 
 function anova(::Type{LRT}, 
@@ -172,7 +172,7 @@ function anova(::Type{LRT},
     df = df[ord]
     # check comparable and nested
     check && @warn "Could not check whether models are nested: results may not be meaningful"
-    lrt_nested(NestedModels{M}(trms), df, deviance.(trms), dispersion(last(trms).model, true))
+    lrt_nested(NestedModels(trms), df, deviance.(trms), dispersion(last(trms).model, true))
 end
 
 anova(::Type{FTest}, aovm::NestedModels{M}) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}} =
