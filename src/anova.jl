@@ -1,10 +1,10 @@
 # ===========================================================================================
 # Main API
 """
-    anova(<glmmodels>...; test::Type{<: GoodnessOfFit},  <keyword arguments>)
-    anova(<anovamodel>; test::Type{<: GoodnessOfFit},  <keyword arguments>)
-    anova(test::Type{<: GoodnessOfFit}, <glmmodels>...;  <keyword arguments>)
-    anova(test::Type{<: GoodnessOfFit}, <anovamodel>;  <keyword arguments>)
+    anova(glmmodels...; test::Type{<: GoodnessOfFit}, keyword_arguments...)
+    anova(anovamodel; test::Type{<: GoodnessOfFit}, keyword_arguments...)
+    anova(test::Type{<: GoodnessOfFit}, <glmmodels>...; keyword_arguments...)
+    anova(test::Type{<: GoodnessOfFit}, <anovamodel>; keyword_arguments...)
 
 Analysis of variance.
 
@@ -16,7 +16,7 @@ Return `AnovaResult{M, test, N}`. See [`AnovaResult`](@ref) for details.
     2. `TableRegressionModel{<: GeneralizedLinearModel}` fitted by `GLM.glm`
     If mutiple models are provided, they should be nested and the last one is the most complex.
 * `anovamodel`: wrapped model objects; `FullModel` and `NestedModels`.
-* `test`: test statistics for goodness of fit. Available tests are [`LikelihoodRatioTest`](@ref) ([`LRT`](@ref)) and [`FTest`](@ref). The default is based on the model type.
+* `test`: test statistics for goodness of fit. Available tests are `LikelihoodRatioTest` (`LRT`) and `FTest`. The default is based on the model type.
     1. `TableRegressionModel{<: LinearModel}`: `FTest`.
     2. `TableRegressionModel{<: GeneralizedLinearModel}`: based on distribution function, see `canonicalgoodnessoffit`.
 
@@ -184,13 +184,13 @@ anova(::Type{LRT}, aovm::NestedModels{M}) where {M <: TableRegressionModel{<: Un
 # Fit new models
 
 """
-    anova_lm(X, y; test::Type{<: GoodnessOfFit} = FTest, <keyword arguments>) 
+    anova_lm(X, y; test::Type{<: GoodnessOfFit} = FTest, keyword_arguments...) 
 
-    anova_lm(test::Type{<: GoodnessOfFit}, X, y; <keyword arguments>)
+    anova_lm(test::Type{<: GoodnessOfFit}, X, y; keyword_arguments...)
 
     anova(test::Type{<: GoodnessOfFit}, ::Type{LinearModel}, X, y; 
         type::Int = 1, 
-        <keyword arguments>)
+        keyword_arguments...)
 
 ANOVA for simple linear regression.
 
@@ -222,11 +222,11 @@ end
 
 """
     anova_glm(X, y, d::UnivariateDistribution, l::Link = canonicallink(d); 
-            test::Type{<: GoodnessOfFit} = canonicalgoodnessoffit(d), <keyword arguments>)
+            test::Type{<: GoodnessOfFit} = canonicalgoodnessoffit(d), keyword_arguments...)
 
-    anova_glm(test::Type{<: GoodnessOfFit}, X, y, d::UnivariateDistribution, l::Link = canonicallink(d); <keyword arguments>)
+    anova_glm(test::Type{<: GoodnessOfFit}, X, y, d::UnivariateDistribution, l::Link = canonicallink(d); keyword_arguments...)
 
-    anova(test::Type{<: GoodnessOfFit}, X, y, d::UnivariateDistribution, l::Link = canonicallink(d); <keyword arguments>)
+    anova(test::Type{<: GoodnessOfFit}, X, y, d::UnivariateDistribution, l::Link = canonicallink(d); keyword_arguments...)
 
 ANOVA for genaralized linear models.
 
