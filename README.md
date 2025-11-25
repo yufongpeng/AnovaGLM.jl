@@ -12,3 +12,5 @@
 [ci-url]: https://github.com/yufongpeng/AnovaGLM.jl/actions?query=workflow%3ACI
 [codecov-img]: https://codecov.io/gh/yufongpeng/AnovaGLM.jl/branch/main/graph/badge.svg?token=a80Q5DNInO
 [codecov-url]: https://codecov.io/gh/yufongpeng/AnovaGLM.jl
+
+*AnovaGLM.jl* is a Julia package providing one-way and multi-way anova in Julia with models from `GLM.jl`. 
