@@ -64,7 +64,7 @@ anova(aovm::NestedModels{<: TableRegressionModel{<: GeneralizedLinearModel}};
 # ==================================================================================================================
 # ANOVA by F test 
 # LinearModels
-const TRM_LM = TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel{<: GLM.GlmResp{T, <: Normal, IdentityLink}}}} where T
+const TRM_LM = TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel{<: GlmResp{T, <: Normal, IdentityLink}}}} where T
 
 anova(::Type{FTest}, 
     trm::TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}; 
@@ -152,7 +152,7 @@ end
 function anova(::Type{FTest}, 
         trms::Vararg{M}; 
         check::Bool = true) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}}  
-    df = dof.(trms)
+    df = dof_aov.(trms)
     ord = sortperm(collect(df))
     df = df[ord]
     trms = trms[ord]
@@ -166,7 +166,7 @@ end
 function anova(::Type{LRT}, 
         trms::Vararg{M}; 
         check::Bool = true) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}}  
-    df = dof.(trms)
+    df = dof_aov.(trms)
     ord = sortperm(collect(df))
     trms = trms[ord]
     df = df[ord]
@@ -176,10 +176,10 @@ function anova(::Type{LRT},
 end
 
 anova(::Type{FTest}, aovm::NestedModels{M}) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}} =
-    ftest_nested(aovm, dof.(aovm.model), round.(Int, dof_residual.(aovm.model)), deviance.(aovm.model), dispersion(last(aovm.model).model, true))
+    ftest_nested(aovm, dof_aov.(aovm.model), round.(Int, dof_residual.(aovm.model)), deviance.(aovm.model), dispersion(last(aovm.model).model, true))
 
 anova(::Type{LRT}, aovm::NestedModels{M}) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}} =
-    lrt_nested(aovm, dof.(aovm.model), deviance.(aovm.model), dispersion(last(aovm.model).model, true))
+    lrt_nested(aovm, dof_aov.(aovm.model), deviance.(aovm.model), dispersion(last(aovm.model).model, true))
 # =================================================================================================================================
 # Fit new models
 

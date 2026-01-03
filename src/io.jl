@@ -3,7 +3,7 @@
 # anovatable api
 function anovatable(aov::AnovaResult{<: FullModel{<: TableRegressionModel{<: LinearModel}, N}, FTest}; rownames = push!(prednames(aov), "(Residuals)")
     ) where N
-    dfr = round(Int, dof_residual(aov.anovamodel.model))
+    dfr = round(Int, dof_aovres(aov.anovamodel.model))
     σ² = dispersion(aov.anovamodel.model.model, true)
     AnovaTable([
                 [dof(aov)..., dfr], 
@@ -17,7 +17,7 @@ function anovatable(aov::AnovaResult{<: FullModel{<: TableRegressionModel{<: Lin
 end 
 
 function anovatable(aov::AnovaResult{<: FullModel{<: TableRegressionModel{<: GeneralizedLinearModel}, N}, FTest}; rownames = push!(prednames(aov), "(Residuals)")) where N
-    dfr = round(Int, dof_residual(aov.anovamodel.model.model))
+    dfr = round(Int, dof_aovres(aov.anovamodel.model.model))
     σ² = dispersion(aov.anovamodel.model.model, true)
     AnovaTable([
                 [dof(aov)..., dfr], 
@@ -50,7 +50,7 @@ function anovatable(aov::AnovaResult{<: NestedModels{<: TableRegressionModel{<: 
     AnovaTable([
                     dof(aov), 
                     [NaN, _diff(dof(aov))...], 
-                    repeat([round(Int, dof_residual(last(aov.anovamodel.model)))], N), 
+                    repeat([round(Int, dof_aovres(last(aov.anovamodel.model)))], N), 
                     rs,
                     [NaN, Δrs...],
                     deviance(aov), 
@@ -70,7 +70,7 @@ function anovatable(aov::AnovaResult{<: NestedModels{<: TableRegressionModel{<: 
     AnovaTable([
                     dof(aov), 
                     [NaN, _diff(dof(aov))...], 
-                    repeat([round(Int, dof_residual(last(aov.anovamodel.model)))], N), 
+                    repeat([round(Int, dof_aovres(last(aov.anovamodel.model)))], N), 
                     rs,
                     [NaN, Δrs...],
                     deviance(aov), 

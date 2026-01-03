@@ -1,6 +1,5 @@
 # ==========================================================================================================
 # Backend funcion
-
 function deviances(aovm::FullModel{<: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}}; kwargs...)
     isa(aovm.model.model.pp, DensePredChol) || throw(
             ArgumentError("Methods for other PredChol types is not implemented; use model with DensesPredChol instead."))
@@ -59,7 +58,7 @@ function deviance(trm::TableRegressionModel{<: LinearModel}, exclude)
 end 
 
 updatechol(::CholeskyPivoted, F::AbstractMatrix{<: BlasReal}) = 
-    cholesky!(F, Val(true), tol = -one(eltype(F)), check = false)
+    cholesky!(F, RowMaximum(); tol = -one(eltype(F)), check = false)
 
 updatechol(::Cholesky, F::AbstractMatrix{<: BlasReal}) = cholesky!(F)
 
@@ -218,11 +217,11 @@ end
 
 # Create nestedmodels
 """
-    nestedmodels(trm::TableRegressionModel{<: LinearModel}; null::Bool = true, <keyword arguments>)
-    nestedmodels(trm::TableRegressionModel{<: GeneralizedLinearModel}; null::Bool = true, <keyword arguments>)
+    nestedmodels(trm::TableRegressionModel{<: LinearModel}; null::Bool = true, keyword_arguments...)
+    nestedmodels(trm::TableRegressionModel{<: GeneralizedLinearModel}; null::Bool = true, keyword_arguments...)
 
-    nestedmodels(::Type{LinearModel}, formula, data; null::Bool = true, <keyword arguments>)
-    nestedmodels(::Type{GeneralizedLinearModel}, formula, data, distr::UnivariateDistribution, link::Link = canonicallink(d); null::Bool = true, <keyword arguments>)
+    nestedmodels(::Type{LinearModel}, formula, data; null::Bool = true, keyword_arguments...)
+    nestedmodels(::Type{GeneralizedLinearModel}, formula, data, distr::UnivariateDistribution, link::Link = canonicallink(d); null::Bool = true, keyword_arguments...)
 
 Generate nested nested models `NestedModels` from a model or formula and data.
 
@@ -308,3 +307,8 @@ isnullable(::Link) = true
 ## For deviances
 isnullable(::LinearModel) = true
 isnullable(model::GeneralizedLinearModel) = isnullable(typeof(model.rr).parameters[3]())
+
+dof_aov(trm::TableRegressionModel{<: Union{<: LinearModel, <: GeneralizedLinearModel}}) = dof_aov(trm.model)
+dof_aov(model::LinearModel) = dof(model) - 1
+dof_aov(model::GeneralizedLinearModel{<: GlmResp{T, <: Normal, IdentityLink}}) where T = dof(model) - 1
+dof_aov(model::GeneralizedLinearModel) = dof(model) - !(model.rr.d isa FixDispDist)
