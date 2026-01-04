@@ -254,5 +254,5 @@ function anova(test::Type{<: GoodnessOfFit}, ::Type{GeneralizedLinearModel}, X, 
         type::Int = 1,
         kwargs...)
     trm = glm(X, y, d, l; kwargs...)
-    anova(test, trm; type, kwargs... )
+    anova(test, trm; type, kwargs...)
 end

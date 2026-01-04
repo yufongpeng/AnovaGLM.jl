@@ -14,7 +14,7 @@ import GLM: delbeta!, linpred, linpred!, deviance
 using AnovaBase: 
     select_super_interaction, extract_contrasts, 
     canonicalgoodnessoffit, FixDispDist, 
-    subformula, predictors, dof_asgn, dof_aovres, deviance, 
+    subformula, formula_aov, predictors, dof_asgn, dof_aovres, deviance, 
     lrt_nested, ftest_nested, _diff, _diffn
 import AnovaBase: anova, nestedmodels, anovatable, prednames, dof_aov
 export anova_lm, anova_glm

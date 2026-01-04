@@ -11,7 +11,7 @@ function deviances(aovm::FullModel{<: TableRegressionModel{<: Union{LinearModel,
         devs = zeros(Float64, length(aovm.pred_id))
         # cache fitted
         dict_devs = Dict{Set{Int}, Float64}()
-        f = formula(aovm.model).rhs
+        f = formula_aov(aovm.model).rhs
         @inbounds for (id, del) in enumerate(aovm.pred_id)
             delcoef = select_super_interaction(f, del)
             dev1 = get!(dict_devs, delcoef, deviance(trm, delcoef; kwargs...))
@@ -233,7 +233,7 @@ Otherwise, it will be an empty model.
 """
 function nestedmodels(trm::M; null::Bool = true, kwargs...) where {M <: TableRegressionModel{<: LinearModel}}
     null = null && isnullable(trm.model.pp.chol) || (@warn "Empty model is not allowed due to `CholeskyPivoted`"; false)
-    assign = unique(asgn(formula(trm)))
+    assign = unique(asgn(formula_aov(trm)))
     pop!(assign)
     dropcollinear, range = null ? (false, union(0, assign)) : (true, assign)
     wts = trm.model.rr.wts
@@ -274,7 +274,7 @@ nestedmodels(::Type{GeneralizedLinearModel}, formula::FormulaTerm, data,
 # backend for implementing nestedmodels or dropterms (in future)
 function subtablemodel(trm::TableRegressionModel, id; reschema::Bool = false)
     # create sub-formula, modify schema, create mf and mm
-    f = formula(trm)
+    f = formula_aov(trm)
     subf = subformula(f.lhs, f.rhs, id; reschema)
     if reschema
         #=
