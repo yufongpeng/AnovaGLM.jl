@@ -121,9 +121,23 @@ end
 # ----------------------------------------------------------------------------------------
 # ANOVA for genaralized linear models
 # λ = -2ln(𝓛(̂θ₀)/𝓛(θ)) ~ χ²ₙ , n = difference of predictors
-anova(::Type{LRT}, 
-        trm::TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}; 
-        type::Int = 1, kwargs...) = anova(LRT, FullModel(trm, type, isnullable(trm.model), true); kwargs...)  
+function anova(::Type{LRT}, 
+        trm::TableRegressionModel{<:LinearModel}; 
+        type::Int = 1, kwargs...) 
+    @warn "Fit all submodels."
+    anova(LRT, nestedmodels(trm; null = isnullable(trm.model)))
+end
+
+function anova(::Type{LRT}, 
+        trm::TableRegressionModel{<: GeneralizedLinearModel}; 
+        type::Int = 1, kwargs...)
+    if trm.model.rr.d isa FixDispDist
+        anova(LRT, FullModel(trm, type, isnullable(trm.model), true); kwargs...)
+    else
+        @warn "Fit all submodels."
+        anova(LRT, nestedmodels(trm; null = isnullable(trm.model)))
+    end
+end
 
 function anova(::Type{LRT}, 
         aovm::FullModel{<: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}})
@@ -133,8 +147,8 @@ function anova(::Type{LRT},
     df = tuple(dof_asgn(assign)...)
     # den = last(ss) / (nobs(trm) - dof(trm) + 1)
     # lrstat = ss[1:end - 1] ./ den
-    σ² = dispersion(aovm.model.model, true)
-    lrstat = Δdev ./ σ²
+    # σ² = dispersion(aovm.model.model, true)
+    lrstat = Δdev
     n = length(lrstat)
     dev = push!(collect(Δdev), deviance(aovm.model))
     i = n
@@ -172,14 +186,16 @@ function anova(::Type{LRT},
     df = df[ord]
     # check comparable and nested
     check && @warn "Could not check whether models are nested: results may not be meaningful"
-    lrt_nested(NestedModels(trms), df, deviance.(trms), dispersion(last(trms).model, true))
+    # lrt_nested(NestedModels(trms), df, deviance.(trms), dispersion(last(trms).model, true))
+    lrt_nested(NestedModels(trms), df, @.(-2loglikelihood(trms)), 1)
 end
 
 anova(::Type{FTest}, aovm::NestedModels{M}) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}} =
     ftest_nested(aovm, dof_aov.(aovm.model), round.(Int, dof_residual.(aovm.model)), deviance.(aovm.model), dispersion(last(aovm.model).model, true))
 
 anova(::Type{LRT}, aovm::NestedModels{M}) where {M <: TableRegressionModel{<: Union{LinearModel, GeneralizedLinearModel}}} =
-    lrt_nested(aovm, dof_aov.(aovm.model), deviance.(aovm.model), dispersion(last(aovm.model).model, true))
+    lrt_nested(aovm, dof_aov.(aovm.model), @.(-2loglikelihood(aovm.model)), 1)
+    # lrt_nested(aovm, dof_aov.(aovm.model), deviance.(aovm.model), dispersion(last(aovm.model).model, true))
 # =================================================================================================================================
 # Fit new models
 

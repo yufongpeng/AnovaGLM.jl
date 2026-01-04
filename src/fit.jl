@@ -236,12 +236,12 @@ function nestedmodels(trm::M; null::Bool = true, kwargs...) where {M <: TableReg
     assign = unique(asgn(formula_aov(trm)))
     pop!(assign)
     dropcollinear, range = null ? (false, union(0, assign)) : (true, assign)
-    wts = trm.model.rr.wts
+    weights = trm.model.rr.wts
     trms = map(range) do id
         # create sub-formula, modify schema, create mf and mm
         mf, mm = subtablemodel(trm, id)
         y = response(mf)
-        TableRegressionModel(fit(trm.mf.model, mm.m, y; wts, dropcollinear, kwargs...), mf, mm)
+        TableRegressionModel(fit(trm.mf.model, mm.m, y; weights, dropcollinear, kwargs...), mf, mm)
     end
     NestedModels(trms..., trm)
 end
@@ -250,7 +250,7 @@ function nestedmodels(trm::M; null::Bool = true, kwargs...) where {M <: TableReg
     null = null && isnullable(trm.model) && isnullable(trm.model.pp.chol) || (@warn "Empty model is not allowed due to `CholeskyPivoted`"; false) 
     distr = trm.model.rr.d
     link = typeof(trm.model.rr).parameters[3]()
-    wts = trm.model.rr.wts
+    weights = trm.model.rr.wts
     offset = trm.model.rr.offset
     assign = unique(trm.mm.assign)
     pop!(assign)
@@ -259,7 +259,7 @@ function nestedmodels(trm::M; null::Bool = true, kwargs...) where {M <: TableReg
         # create sub-formula, modify schema, create mf and mm
         mf, mm = subtablemodel(trm, id)
         y = response(mf)
-        TableRegressionModel(fit(trm.mf.model, mm.m, y, distr, link; wts, offset, kwargs...), mf, mm)
+        TableRegressionModel(fit(trm.mf.model, mm.m, y, distr, link; weights, offset, kwargs...), mf, mm)
     end
     NestedModels(trms..., trm)
 end

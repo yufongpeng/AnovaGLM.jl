@@ -67,13 +67,13 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
             @test isapprox(deviance(aov1), AnovaBase._diffn(deviance(aovf)))
             @test isapprox(teststat(aov1), teststat(aovf)[2:end])
             @test isapprox(teststat(aov2), (26485.300978452644, 56.637879295914324, 188.10911669921464, 0.4064420847481629))
-            @test isapprox(teststat(aov1lr), teststat(aovlr)[2:end])
+            @test isapprox(teststat(aov1lr)[2:end], teststat(aovlr)[2:end])
             @test isapprox(coef(lm4), coef(aov3.anovamodel.model))
         end
     
         @testset "Linear regression with frequency weights" begin
             wlm1, wlm2 = nestedmodels(LinearModel, @formula(Cost / Claims ~ Insured + Merit), insurance, 
-                                    wts = insurance.Claims ./ sum(insurance.Claims) .* length(insurance.Claims)).model
+                                    weights = insurance.Claims ./ sum(insurance.Claims) .* length(insurance.Claims)).model
             global aov = anova(wlm2, type = 2)
             global aovf = anova(wlm1, wlm2)
             @test !(@test_error test_show(aov))
@@ -87,7 +87,7 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
     @testset "GeneralizedLinearModel" begin
         @testset "Gamma regression" begin
             global aov = anova_glm(FTest, @formula(Cost / Claims ~ 0 + Insured + Merit), insurance, Gamma(), 
-                                    wts = insurance.Claims ./ sum(insurance.Claims) .* length(insurance.Claims), type = 2)
+                                    weights = insurance.Claims ./ sum(insurance.Claims) .* length(insurance.Claims), type = 2)
             @test !(@test_error test_show(aov))
             #@test @test_error anova_glm(@formula(Cost / Claims ~ Merit + Class), insurance, Gamma(), type = 3) # should be ok without intercept
             #@test @test_error anova_glm(@formula(Cost / Claims ~ 1 + Class), insurance, Gamma(), type = 3) # should be ok without intercept
@@ -119,7 +119,7 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
             @test first(nobs(aov)) == lr.nobs
             @test dof(aov) == lr.dof
             @test anova_test(aov) == LRT
-            @test isapprox(deviance(aov), lr.deviance)
+            @test isapprox(deviance(aov), -2 .* lr.loglikelihood)
             @test isapprox(pval(aov)[2:end], lr.pval[2:end])
         end
     
